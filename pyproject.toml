@@ -1,0 +1,152 @@
+# Recipe for pip: project name, dependencies, and console script names.
+# Hatchling reads this file to build/install the aris-rl package.
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "aris-rl"
+version = "0.1.0"
+description = "ARIS: learning-based retry and timeout tuning for microservice-style systems."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "KusalDemo" }]
+dependencies = [
+    "numpy>=1.26.0",
+    "pyyaml>=6.0.1",
+    "gymnasium>=0.29.1",
+    "grpcio>=1.80.0",
+    "protobuf>=5.26.0",
+    "prometheus-client>=0.21.0",
+]
+
+[project.scripts]
+aris-train = "aris_rl.cli:main_train"
+aris-export = "aris_rl.cli:main_export"
+aris-validate-config = "aris_rl.cli:main_validate_config"
+aris-eval = "aris_rl.cli:main_eval"
+aris-benchmark = "aris_rl.cli:main_benchmark"
+
+[project.optional-dependencies]
+train = [
+    "stable-baselines3>=2.3.0",
+    "torch>=2.1.0",
+]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "coverage[toml]>=7.6",
+    "hypothesis>=6.0",
+    "ruff>=0.8.0",
+    "mypy>=1.13.0",
+    "pre-commit>=4.0.0",
+    "types-PyYAML>=6.0.12",
+    "stable-baselines3>=2.3.0",
+    "torch>=2.1.0",
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "pydantic>=2.10.0",
+    "httpx>=0.28.0",
+    "grpcio-tools>=1.80.0",
+]
+onnx = [
+    "onnx>=1.16.0",
+]
+dashboard = [
+    "streamlit>=1.40.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["aris-rl/src/aris_rl", "aris-rl/src/aris"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/aris-rl",
+    "/configs",
+    "/README.md",
+    "/LICENSE",
+]
+
+[tool.ruff]
+target-version = "py311"
+src = [
+    "aris-rl/src",
+    "aris-rl/tests",
+    "services/policy-service",
+    "services/telemetry-bridge",
+    "benchmarks",
+    "dashboards",
+    "scripts",
+]
+line-length = 100
+extend-exclude = ["aris-rl/src/aris"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.ruff.lint.per-file-ignores]
+"aris-rl/tests/test_config_validation_branches.py" = ["E501"]
+"aris-rl/tests/test_config_missing_subkeys.py" = ["E501"]
+"scripts/gen_dsb_network_override.py" = ["E501"]
+
+# mypy checks type hints in aris_rl (optional deps like torch are ignored until installed).
+[tool.mypy]
+python_version = "3.11"
+warn_unused_ignores = true
+strict = false
+mypy_path = "aris-rl/src"
+packages = ["aris_rl"]
+
+[[tool.mypy.overrides]]
+module = "torch"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "torch.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "stable_baselines3"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "stable_baselines3.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "onnx"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "prometheus_client"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "prometheus_client.*"
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+pythonpath = ["aris-rl/src", "services/policy-service", "."]
+testpaths = ["aris-rl/tests", "tests/integration"]
+markers = [
+    "integration: tests that start Docker Compose (slow; optional in CI)",
+]
+
+[tool.coverage.run]
+branch = false
+source = ["aris_rl"]
+omit = [
+    "*/aris/policy/*",
+    "*/aris/__init__.py",
+]
+
+[tool.coverage.report]
+fail_under = 85
+show_missing = true
+skip_empty = true
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "\\.\\.\\.",
+]
