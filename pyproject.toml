@@ -1,0 +1,70 @@
+# Recipe for pip: project name, dependencies, and console script names.
+# Hatchling reads this file to build/install the aris-rl package.
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "aris-rl"
+version = "0.1.0"
+description = "ARIS: learning-based retry and timeout tuning for microservice-style systems."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "KusalDemo" }]
+dependencies = [
+  "numpy>=1.26.0",
+  "pyyaml>=6.0.1",
+  "gymnasium>=0.29.1",
+  "grpcio>=1.80.0",
+  "protobuf>=5.26.0",
+  "prometheus-client>=0.21.0",
+]
+
+[project.scripts]
+aris-train = "aris_rl.cli:main_train"
+aris-export = "aris_rl.cli:main_export"
+aris-validate-config = "aris_rl.cli:main_validate_config"
+aris-eval = "aris_rl.cli:main_eval"
+aris-benchmark = "aris_rl.cli:main_benchmark"
+
+[project.optional-dependencies]
+train = [
+  "stable-baselines3>=2.3.0",
+  "torch>=2.1.0",
+]
+dev = [
+  "pytest>=8.0",
+  "pytest-cov>=5.0",
+  "coverage[toml]>=7.6",
+  "hypothesis>=6.0",
+  "ruff>=0.8.0",
+  "mypy>=1.13.0",
+  "pre-commit>=4.0.0",
+  "types-PyYAML>=6.0.12",
+  "stable-baselines3>=2.3.0",
+  "torch>=2.1.0",
+  "fastapi>=0.115.0",
+  "uvicorn[standard]>=0.32.0",
+  "pydantic>=2.10.0",
+  "httpx>=0.28.0",
+  "grpcio-tools>=1.80.0",
+]
+onnx = [
+  "onnx>=1.16.0",
+]
+dashboard = [
+  "streamlit>=1.40.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["aris-rl/src/aris_rl", "aris-rl/src/aris"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/aris-rl",
+  "/configs",
+  "/README.md",
+  "/LICENSE",
+]
+
