@@ -90,3 +90,63 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 "aris-rl/tests/test_config_missing_subkeys.py" = ["E501"]
 "scripts/gen_dsb_network_override.py" = ["E501"]
 
+# mypy checks type hints in aris_rl (optional deps like torch are ignored until installed).
+[tool.mypy]
+python_version = "3.11"
+warn_unused_ignores = true
+strict = false
+mypy_path = "aris-rl/src"
+packages = ["aris_rl"]
+
+[[tool.mypy.overrides]]
+module = "torch"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "torch.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "stable_baselines3"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "stable_baselines3.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "onnx"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "prometheus_client"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "prometheus_client.*"
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+pythonpath = ["aris-rl/src", "services/policy-service", "."]
+testpaths = ["aris-rl/tests", "tests/integration"]
+markers = [
+    "integration: tests that start Docker Compose (slow; optional in CI)",
+]
+
+[tool.coverage.run]
+branch = false
+source = ["aris_rl"]
+omit = [
+    "*/aris/policy/*",
+    "*/aris/__init__.py",
+]
+
+[tool.coverage.report]
+fail_under = 85
+show_missing = true
+skip_empty = true
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "\\.\\.\\.",
+]
