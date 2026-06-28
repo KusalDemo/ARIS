@@ -1,5 +1,6 @@
 """Gymnasium environments and helpers for actions and simulation backends."""
 
+from aris_rl.envs.aris_env import ArisMicroserviceEnv
 from aris_rl.envs.backends import MockBackend, SimulationBackend, StepOutcome
 from aris_rl.envs.continuous_actions import decode_continuous_action, make_ppo_box_space
 from aris_rl.envs.discrete_actions import (
@@ -13,6 +14,7 @@ from aris_rl.envs.flat_actions import flat_dim, flat_to_multi, multi_to_flat
 from aris_rl.envs.wrappers import FlattenMultiDiscreteActions
 
 __all__ = [
+    "ArisMicroserviceEnv",
     "DiscreteActionLayout",
     "FlattenMultiDiscreteActions",
     "MockBackend",
