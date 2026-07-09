@@ -511,7 +511,8 @@ def validate_action_config(action: dict[str, Any], policy: dict[str, Any]) -> No
 def validate_safeguards_config(safeguards: dict[str, Any], policy: dict[str, Any]) -> None:
     """Raise if safeguard bounds disagree with each other or with policy defaults.
 
-    Serving-time safety rails must line up with the policy section so training and live traffic agree.
+    Serving-time safety rails must line up with the policy section so training and live
+    traffic agree.
     """
     if not isinstance(safeguards, dict):
         msg = f"safeguards must be a mapping, got {type(safeguards).__name__}"
