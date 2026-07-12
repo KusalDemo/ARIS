@@ -1,1 +1,5 @@
-"""Evaluate saved SB3 checkpoints in the simulator."""
+"""Roll out saved policies on the simulator for reporting (not the gRPC policy server)."""
+
+from aris_rl.evaluation.sb3_eval import evaluate_saved_model
+
+__all__ = ["evaluate_saved_model"]
