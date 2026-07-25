@@ -27,20 +27,24 @@ test-cov:
 	pytest aris-rl/tests tests/integration --cov=aris_rl --cov-report=term-missing --cov-fail-under=85
 
 up:
-	@echo "stub: infra/docker/docker-compose.yml arrives Week 3"
-	@exit 1
+	$(COMPOSE) up -d
 
 down:
-	@echo "stub: infra/docker/docker-compose.yml arrives Week 3"
-	@exit 1
+	$(COMPOSE) down
 
 compose-up-full:
-	@echo "stub: use 'make compose-up-full' after Week 3 infra commit"
-	@exit 1
+	$(COMPOSE) up -d --build
 
 compose-down:
-	@echo "stub: compose-down after Week 3"
-	@exit 1
+	$(COMPOSE) down
+
+policy-static:
+	ARIS_CONFIG=/config/benchmark-static.yaml $(COMPOSE) up -d --force-recreate policy-service
+	@echo "ARIS_CONFIG=/config/benchmark-static.yaml (inference off)"
+
+policy-adaptive:
+	ARIS_CONFIG=/config/benchmark-adaptive.yaml $(COMPOSE) up -d --force-recreate policy-service
+	@echo "ARIS_CONFIG=/config/benchmark-adaptive.yaml (needs data/models/policy.ts)"
 
 dsb-submodule-init:
 	git submodule update --init --recursive
