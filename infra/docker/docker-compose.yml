@@ -1,15 +1,28 @@
+# The whole ARIS practice testbed in one file: sample apps, the policy brain, a proxy in front,
+# and the monitoring tools that let us see what happened.
+#
+# Start it with `make compose-up-full` (or `make demo` for the same thing plus copy-paste curls).
+#
+# Host ports you can open in a browser or curl:
+#   10000 Envoy front door   18001 echo   18002 cpu   18003 aggregator
+#   18080 policy HTTP        15051 policy gRPC        18085 telemetry bridge
+#   9090  Prometheus         3000  Grafana           8474 Toxiproxy admin
 name: aris
 
 networks:
-  arcs:
+  # One private network so containers can reach each other by service name (e.g. http://echo-service:8080)
+  # while the outside world only sees the ports we publish below.
+  aris:
     driver: bridge
 
 services:
+  # Redis is a tiny in-memory database. ARIS keeps it in the stack as shared scratch space for
+  # future features (rate-limit counters, cached decisions). Nothing breaks if it stays idle.
   redis:
     image: redis:7-alpine
     ports:
       - "6379:6379"
-    networks: [arcs]
+    networks: [aris]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -17,6 +30,8 @@ services:
       retries: 3
     mem_limit: 256m
 
+  # OpenTelemetry collector: apps ship traces/metrics here, and it re-publishes them in a format
+  # Prometheus can scrape. One collector means the apps do not each need Prometheus wiring.
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.115.1
     command: ["--config=/etc/otelcol/config.yaml"]
@@ -27,7 +42,7 @@ services:
       - "4318:4318"
       - "8889:8889"
       - "13133:13133"
-    networks: [arcs]
+    networks: [aris]
     mem_limit: 512m
 
   policy-service:
@@ -40,12 +55,12 @@ services:
       LOG_LEVEL: INFO
     volumes:
       - ../../configs:/config:ro
-      # TorchScript + sidecar JSON (arcs-export) — host repo path ./data/models -> /models in container.
+      # TorchScript + sidecar JSON (aris-export) — host repo path ./data/models -> /models in container.
       - ../../data/models:/models:ro
     ports:
       - "18080:8080"
       - "15051:50051"
-    networks: [arcs]
+    networks: [aris]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health/live')"]
       interval: 10s
@@ -65,7 +80,7 @@ services:
       LOG_LEVEL: INFO
       # Set to kafka:9092 when you merge infra/docker/docker-compose.kafka.yml (see Makefile compose-up-kafka).
       KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS:-}
-      KAFKA_TOPIC_ARCS_TELEMETRY: arcs.telemetry.v1
+      KAFKA_TOPIC_ARIS_TELEMETRY: aris.telemetry.v1
     volumes:
       - ../../configs/aris.default.yaml:/config/aris.default.yaml:ro
     ports:
@@ -73,7 +88,7 @@ services:
     depends_on:
       prometheus:
         condition: service_healthy
-    networks: [arcs]
+    networks: [aris]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8085/health/live')"]
       interval: 15s
@@ -96,9 +111,11 @@ services:
         condition: service_healthy
       echo-service:
         condition: service_healthy
-    networks: [arcs]
+    networks: [aris]
     mem_limit: 256m
 
+  # Prometheus: the time-series database that stores every number the stack produces.
+  # It also evaluates recording_rules.yml, which pre-computes the P99 lines Grafana draws.
   prometheus:
     image: prom/prometheus:v2.55.1
     command:
@@ -113,7 +130,7 @@ services:
     depends_on:
       - otel-collector
       - policy-service
-    networks: [arcs]
+    networks: [aris]
     healthcheck:
       test: ["CMD", "wget", "-q", "-O-", "http://127.0.0.1:9090/-/healthy"]
       interval: 10s
@@ -121,7 +138,9 @@ services:
       retries: 5
     mem_limit: 768m
 
-  # Dashboards: open http://localhost:3000 (admin/admin) and open the “ARCS Overview” board.
+  # Grafana: the graphs. Open http://localhost:3000 (admin / admin) and pick the "ARIS Overview" board.
+  # Everything under ../grafana/provisioning is auto-loaded on boot, so there is no manual setup:
+  # the datasource points at Prometheus and the dashboard JSON is imported for you.
   grafana:
     image: grafana/grafana:11.4.0
     ports:
@@ -138,7 +157,7 @@ services:
     depends_on:
       prometheus:
         condition: service_healthy
-    networks: [arcs]
+    networks: [aris]
     mem_limit: 512m
 
   echo-service:
@@ -153,7 +172,7 @@ services:
       - "18001:8080"
     depends_on:
       - otel-collector
-    networks: [arcs]
+    networks: [aris]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health/live')"]
       interval: 10s
@@ -173,7 +192,7 @@ services:
       - "18002:8080"
     depends_on:
       - otel-collector
-    networks: [arcs]
+    networks: [aris]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health/live')"]
       interval: 10s
@@ -200,7 +219,7 @@ services:
         condition: service_started
       toxiproxy-init:
         condition: service_completed_successfully
-    networks: [arcs]
+    networks: [aris]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health/live')"]
       interval: 10s
@@ -209,16 +228,21 @@ services:
       start_period: 40s
     mem_limit: 256m
 
+  # Toxiproxy: a proxy that can break things on purpose (add 200ms delay, drop connections).
+  # The aggregator calls echo/cpu *through* it, so we can simulate a struggling service and watch
+  # the policy react - without editing a single line of application code.
+  # Recipes live in benchmarks/scenarios/; the admin API is on port 8474.
   toxiproxy:
     image: ghcr.io/shopify/toxiproxy:2.9.0
     ports:
       - "8474:8474"
       - "8666:8666"
       - "8667:8667"
-    networks: [arcs]
+    networks: [aris]
     mem_limit: 128m
 
-  # Runs once at startup: wires Toxiproxy so port 8666 → echo, 8667 → cpu (see benchmarks/scenarios).
+  # Runs once at startup, then exits: it tells Toxiproxy "port 8666 forwards to echo, 8667 to cpu".
+  # Compose waits for this job to finish successfully before starting the aggregator.
   toxiproxy-init:
     image: curlimages/curl:8.11.1
     depends_on:
@@ -228,7 +252,7 @@ services:
         condition: service_healthy
       cpu-service:
         condition: service_healthy
-    networks: [arcs]
+    networks: [aris]
     entrypoint: ["/bin/sh", "-ec"]
     command:
       - |
