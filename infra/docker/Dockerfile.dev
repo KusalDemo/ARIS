@@ -7,10 +7,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
 COPY pyproject.toml README.md LICENSE ./
-COPY arcs-rl arcs-rl
+COPY aris-rl aris-rl
 COPY configs configs
 
 RUN pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir -e .
 
-CMD ["python", "-c", "import arcs_rl; print(arcs_rl.__version__)"]
+# Default command just proves the install worked by printing the package version.
+CMD ["python", "-c", "import aris_rl; print(aris_rl.__version__)"]

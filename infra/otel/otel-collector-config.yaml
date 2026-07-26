@@ -25,7 +25,7 @@ exporters:
     endpoint: 0.0.0.0:8889
     const_labels:
       # Makes it clear in dashboards this is fake lab traffic, not real user data.
-      arcs_environment: synthetic_testbed
+      aris_environment: synthetic_testbed
 
 extensions:
   health_check:

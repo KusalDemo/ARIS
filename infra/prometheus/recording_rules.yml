@@ -2,19 +2,19 @@
 # Some lines only produce numbers after the apps have sent enough traffic — that’s OK.
 
 groups:
-  - name: arcs_availability
+  - name: aris_availability
     interval: 30s
     rules:
       # 1 if Prometheus could reach the collector metrics endpoint, 0 if not.
-      - record: arcs:otel_collector:up
+      - record: aris:otel_collector:up
         expr: up{job="otel-collector-app-metrics"}
 
-  - name: arcs_http_from_otel
+  - name: aris_http_from_otel
     interval: 10s
     rules:
       # Rough “slow request” line: 99th percentile of HTTP duration over ~10 minutes (if that histogram exists).
       # If your library names metrics differently, you may need to tweak the name inside the rate(...).
-      - record: arcs:http_server_duration:p99_10m
+      - record: aris:http_server_duration:p99_10m
         expr: |
           histogram_quantile(
             0.99,
@@ -22,7 +22,7 @@ groups:
               rate(http_server_duration_milliseconds_bucket{job="otel-collector-app-metrics"}[10m])
             )
           )
-      - record: arcs:http_server_duration:p50_10m
+      - record: aris:http_server_duration:p50_10m
         expr: |
           histogram_quantile(
             0.50,
@@ -31,24 +31,24 @@ groups:
             )
           )
 
-  # Policy service: native histogram arcs_policy_decision_latency_seconds (seconds).
-  - name: arcs_policy
+  # Policy service: native histogram aris_policy_decision_latency_seconds (seconds).
+  - name: aris_policy
     interval: 30s
     rules:
       # Rough P99 of decision time over 5 minutes (for SLO-style dashboards).
-      - record: arcs:policy:decision_latency_p99_5m
+      - record: aris:policy:decision_latency_p99_5m
         expr: |
           histogram_quantile(
             0.99,
             sum by (le) (
-              rate(arcs_policy_decision_latency_seconds_bucket{job="arcs-policy-service"}[5m])
+              rate(aris_policy_decision_latency_seconds_bucket{job="aris-policy-service"}[5m])
             )
           )
       # Total decisions per second (all routes combined).
-      - record: arcs:policy:decisions_per_second
+      - record: aris:policy:decisions_per_second
         expr: |
-          sum(rate(arcs_policy_decisions_total{job="arcs-policy-service"}[5m]))
+          sum(rate(aris_policy_decisions_total{job="aris-policy-service"}[5m]))
       # How often safeguards rewrite the suggestion (all reasons, all routes).
-      - record: arcs:policy:overrides_per_second
+      - record: aris:policy:overrides_per_second
         expr: |
-          sum(rate(arcs_safeguard_overrides_total{job="arcs-policy-service"}[5m]))
+          sum(rate(aris_safeguard_overrides_total{job="aris-policy-service"}[5m]))
