@@ -67,7 +67,10 @@ def test_freeze_holds_last_safe_until_clear() -> None:
         now_monotonic_s=2.0,
     )
     assert bad.frozen_active is True
-    assert bad.action == first.action
+    # Last safe was retry=1; freeze keeps dials but still caps retry ≤ 1.
+    assert bad.action.retry == 1
+    assert bad.action.backoff_multiplier == first.action.backoff_multiplier
+    assert bad.action.timeout_ms == first.action.timeout_ms
 
     mid = eng.decide(
         route="checkout",
@@ -76,7 +79,7 @@ def test_freeze_holds_last_safe_until_clear() -> None:
         now_monotonic_s=3.0,
     )
     assert mid.frozen_active is True
-    assert mid.action == first.action
+    assert mid.action.retry == 1
 
     ok = eng.decide(
         route="checkout",
@@ -86,6 +89,33 @@ def test_freeze_holds_last_safe_until_clear() -> None:
     )
     assert ok.frozen_active is False
     assert ok.action.retry == 3
+
+
+def test_freeze_caps_retry_when_last_safe_was_high() -> None:
+    eng = SafeguardEngine(
+        _minimal_cfg(
+            circuit_breaker_error_rate_threshold=0.5,
+            circuit_breaker_clear_error_rate_threshold=0.1,
+        )
+    )
+    healthy = eng.decide(
+        route="pay",
+        suggested=PolicyAction(retry=3, backoff_multiplier=1.5, timeout_ms=1000.0),
+        error_rate=0.0,
+        now_monotonic_s=1.0,
+    )
+    assert healthy.action.retry == 3
+
+    frozen = eng.decide(
+        route="pay",
+        suggested=PolicyAction(retry=5, backoff_multiplier=2.0, timeout_ms=2000.0),
+        error_rate=1.0,
+        now_monotonic_s=2.0,
+    )
+    assert frozen.frozen_active is True
+    assert frozen.action.retry == 1
+    assert "circuit_breaker_freeze_cap_retry" in frozen.override_reasons
+    assert "circuit_breaker_freeze_hold_last_safe" in frozen.override_reasons
 
 
 def test_rate_limit_blocks_rapid_changes() -> None:
