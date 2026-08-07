@@ -1,92 +1,92 @@
-# Merged after upstream socialNetwork/docker-compose.yml: every DSB service joins the ARCS network.
-# The network name aris_aris matches Docker Compose project "arcs" + network key "arcs" from infra/docker/docker-compose.yml.
+# Merged after upstream socialNetwork/docker-compose.yml: every DSB service joins the ARIS network.
+# The network name aris_aris matches Docker Compose project "aris" + network key "aris" from infra/docker/docker-compose.yml.
 networks:
-  arcs:
+  aris:
     external: true
     name: aris_aris
 
 services:
   compose-post-service:
     networks:
-      - arcs
+      - aris
   home-timeline-redis:
     networks:
-      - arcs
+      - aris
   home-timeline-service:
     networks:
-      - arcs
+      - aris
   jaeger-agent:
     networks:
-      - arcs
+      - aris
   media-frontend:
     networks:
-      - arcs
+      - aris
   media-memcached:
     networks:
-      - arcs
+      - aris
   media-mongodb:
     networks:
-      - arcs
+      - aris
   media-service:
     networks:
-      - arcs
+      - aris
   nginx-thrift:
     networks:
-      - arcs
+      - aris
   post-storage-memcached:
     networks:
-      - arcs
+      - aris
   post-storage-mongodb:
     networks:
-      - arcs
+      - aris
   post-storage-service:
     networks:
-      - arcs
+      - aris
   social-graph-mongodb:
     networks:
-      - arcs
+      - aris
   social-graph-redis:
     networks:
-      - arcs
+      - aris
   social-graph-service:
     networks:
-      - arcs
+      - aris
   text-service:
     networks:
-      - arcs
+      - aris
   unique-id-service:
     networks:
-      - arcs
+      - aris
   url-shorten-memcached:
     networks:
-      - arcs
+      - aris
   url-shorten-mongodb:
     networks:
-      - arcs
+      - aris
   url-shorten-service:
     networks:
-      - arcs
+      - aris
   user-memcached:
     networks:
-      - arcs
+      - aris
   user-mention-service:
     networks:
-      - arcs
+      - aris
   user-mongodb:
     networks:
-      - arcs
+      - aris
   user-service:
     networks:
-      - arcs
+      - aris
   user-timeline-mongodb:
     networks:
-      - arcs
+      - aris
   user-timeline-redis:
     networks:
-      - arcs
+      - aris
   user-timeline-service:
     networks:
-      - arcs
+      - aris
 
   # When you merge this file for DeathStarBench, Envoy reads envoy-dsb.yaml and forwards to nginx-thrift.
   envoy:

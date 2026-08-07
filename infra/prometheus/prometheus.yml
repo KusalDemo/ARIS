@@ -11,11 +11,11 @@ rule_files:
 
 scrape_configs:
   # Local Prometheus scrape for the policy service (native `/metrics`, not via OTLP).
-  - job_name: arcs-policy-service
+  - job_name: aris-policy-service
     static_configs:
       - targets: ["policy-service:8080"]
 
-  - job_name: arcs-telemetry-bridge
+  - job_name: aris-telemetry-bridge
     static_configs:
       - targets: ["telemetry-bridge:8085"]
 

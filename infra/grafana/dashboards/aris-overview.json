@@ -8,7 +8,7 @@
   "liveNow": false,
   "panels": [
     {
-      "datasource": { "type": "prometheus", "uid": "arcs-prometheus" },
+      "datasource": { "type": "prometheus", "uid": "aris-prometheus" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -29,8 +29,8 @@
       "options": { "legend": { "displayMode": "list", "placement": "bottom" } },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "arcs-prometheus" },
-          "expr": "arcs:policy:decision_latency_p99_5m",
+          "datasource": { "type": "prometheus", "uid": "aris-prometheus" },
+          "expr": "aris:policy:decision_latency_p99_5m",
           "legendFormat": "P99 decision time",
           "refId": "A"
         }
@@ -39,7 +39,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "arcs-prometheus" },
+      "datasource": { "type": "prometheus", "uid": "aris-prometheus" },
       "fieldConfig": {
         "defaults": { "color": { "mode": "palette-classic" }, "unit": "ops" },
         "overrides": []
@@ -49,14 +49,14 @@
       "options": { "legend": { "displayMode": "list", "placement": "bottom" } },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "arcs-prometheus" },
-          "expr": "arcs:policy:decisions_per_second",
+          "datasource": { "type": "prometheus", "uid": "aris-prometheus" },
+          "expr": "aris:policy:decisions_per_second",
           "legendFormat": "decisions/s",
           "refId": "A"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "arcs-prometheus" },
-          "expr": "arcs:policy:overrides_per_second",
+          "datasource": { "type": "prometheus", "uid": "aris-prometheus" },
+          "expr": "aris:policy:overrides_per_second",
           "legendFormat": "safeguard overrides/s",
           "refId": "B"
         }
@@ -65,7 +65,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "arcs-prometheus" },
+      "datasource": { "type": "prometheus", "uid": "aris-prometheus" },
       "fieldConfig": {
         "defaults": { "color": { "mode": "palette-classic" }, "unit": "ms" },
         "overrides": []
@@ -75,14 +75,14 @@
       "options": { "legend": { "displayMode": "list", "placement": "bottom" } },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "arcs-prometheus" },
-          "expr": "arcs:http_server_duration:p99_10m",
+          "datasource": { "type": "prometheus", "uid": "aris-prometheus" },
+          "expr": "aris:http_server_duration:p99_10m",
           "legendFormat": "HTTP p99 (OTel)",
           "refId": "A"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "arcs-prometheus" },
-          "expr": "arcs:http_server_duration:p50_10m",
+          "datasource": { "type": "prometheus", "uid": "aris-prometheus" },
+          "expr": "aris:http_server_duration:p50_10m",
           "legendFormat": "HTTP p50 (OTel)",
           "refId": "B"
         }
@@ -94,13 +94,13 @@
   "refresh": "10s",
   "schemaVersion": 38,
   "style": "dark",
-  "tags": ["arcs"],
+  "tags": ["aris"],
   "templating": { "list": [] },
   "time": { "from": "now-15m", "to": "now" },
   "timepicker": {},
   "timezone": "browser",
-  "title": "ARCS Overview",
-  "uid": "arcs-overview",
+  "title": "ARIS Overview",
+  "uid": "aris-overview",
   "version": 1,
   "weekStart": ""
 }

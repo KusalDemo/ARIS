@@ -1,7 +1,7 @@
 # Load JSON dashboards from the folder below when the container starts.
 apiVersion: 1
 providers:
-  - name: ARCS
+  - name: ARIS
     type: file
     options:
       path: /etc/grafana/dashboards

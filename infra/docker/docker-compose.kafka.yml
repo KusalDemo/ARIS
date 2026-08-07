@@ -1,9 +1,16 @@
-# Optional Kafka (KRaft, single broker, plaintext). For local labs only — use TLS/SASL for real deployments.
-# From repo root: make compose-up-kafka
+# OPTIONAL add-on: a single Kafka broker for the telemetry bridge.
 #
-# Merges with infra/docker/docker-compose.yml and wires telemetry-bridge to consume arcs.telemetry.v1.
+# The bridge reads Prometheus by default. Use Kafka when
+# you want services to push telemetry events the moment they happen instead of waiting for a scrape.
+#
+# Start it with:  make compose-up-kafka      Stop it with:  make compose-down-kafka
+# That merges this file on top of infra/docker/docker-compose.yml, so the base stack is unchanged
+# and the telemetry-bridge simply gets KAFKA_BOOTSTRAP_SERVERS pointed at the new broker.
+#
+# Events use the topic aris.telemetry.v1 (see services/telemetry-bridge/main.py).
 
 services:
+  # KRaft mode means Kafka runs without a separate ZooKeeper container - one less moving part.
   kafka:
     image: docker.io/bitnami/kafka:3.7.2-debian-12-r3
     ports:
@@ -18,7 +25,7 @@ services:
       KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
       KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "true"
-    networks: [arcs]
+    networks: [aris]
     mem_limit: 1024m
     healthcheck:
       test: ["CMD-SHELL", "kafka-topics.sh --bootstrap-server localhost:9092 --list || exit 1"]
@@ -27,6 +34,7 @@ services:
       retries: 8
       start_period: 45s
 
+  # This block does not create a second bridge: it patches the one from the base compose file.
   telemetry-bridge:
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092

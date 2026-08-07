@@ -7,9 +7,10 @@ This measures simulator reward only. It does not benchmark the policy gRPC servi
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from stable_baselines3 import DQN, PPO
+from stable_baselines3.common.base_class import BaseAlgorithm
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.utils import set_random_seed
 
@@ -48,6 +49,8 @@ def evaluate_saved_model(
     algo = str(config["action"]["algorithm"]).lower()
 
     try:
+        # DQN and PPO are different classes, so the variable is typed as the shared base class.
+        model: BaseAlgorithm
         if algo == "dqn":
             model = DQN.load(str(model_path), env=vec, device=device)
         elif algo == "ppo":
@@ -66,4 +69,6 @@ def evaluate_saved_model(
     finally:
         vec.close()
 
-    return float(mean_reward), float(std_reward)
+    # evaluate_policy only returns per-episode lists when return_episode_rewards=True, which we do
+    # not pass, so these are always plain numbers. The cast tells the type checker the same thing.
+    return float(cast(float, mean_reward)), float(cast(float, std_reward))

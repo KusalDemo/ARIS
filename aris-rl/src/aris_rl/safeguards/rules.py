@@ -133,6 +133,22 @@ def _default_action(cfg: SafeguardConfig) -> PolicyAction:
     )
 
 
+# While frozen under high error, do not keep burning high retry counts from last_safe.
+_FREEZE_MAX_RETRY = 1
+
+
+def _cap_retry_for_freeze(action: PolicyAction) -> tuple[PolicyAction, list[str]]:
+    """Cap retries to at most 1 so freeze sheds load instead of repeating last_safe knocks."""
+    if action.retry <= _FREEZE_MAX_RETRY:
+        return action, []
+    capped = PolicyAction(
+        retry=_FREEZE_MAX_RETRY,
+        backoff_multiplier=action.backoff_multiplier,
+        timeout_ms=action.timeout_ms,
+    )
+    return capped, ["circuit_breaker_freeze_cap_retry"]
+
+
 def _actions_equal(a: PolicyAction, b: PolicyAction) -> bool:
     return (
         a.retry == b.retry
@@ -204,10 +220,12 @@ class SafeguardEngine:
                 st.frozen = False
                 reasons.append("circuit_breaker_cleared")
             else:
-                # Still recovering: keep the last safe triple; ignore new suggestions.
+                # Still recovering: hold last safe dials but cap retries (shed load).
                 hold = st.last_safe if st.last_safe is not None else _default_action(cfg)
                 held, hold_reasons = _clamp_action(cfg, hold)
                 reasons.extend(hold_reasons)
+                held, cap_reasons = _cap_retry_for_freeze(held)
+                reasons.extend(cap_reasons)
                 reasons.append("circuit_breaker_still_frozen_hold_last_safe")
                 st.last_applied = held
                 return SafeguardDecision(
@@ -222,6 +240,8 @@ class SafeguardEngine:
             hold = st.last_safe if st.last_safe is not None else _default_action(cfg)
             held, hold_reasons = _clamp_action(cfg, hold)
             reasons.extend(hold_reasons)
+            held, cap_reasons = _cap_retry_for_freeze(held)
+            reasons.extend(cap_reasons)
             reasons.append("circuit_breaker_freeze_hold_last_safe")
             st.last_applied = held
             return SafeguardDecision(

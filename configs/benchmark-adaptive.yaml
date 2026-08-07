@@ -1,9 +1,13 @@
-# STATIC arm of the experiment: the policy service answers with fixed numbers from this file.
-# No model is loaded (inference_enabled: false), so every request gets the same retry/backoff/
-# timeout. This is the baseline we compare the learned policy against.
+# ADAPTIVE arm of the experiment: the policy service loads the trained model and lets it choose
+# retry/backoff/timeout per request (safeguards still clamp the result).
 #
-# Use it with:  make policy-static      (sets ARIS_CONFIG=/config/benchmark-static.yaml)
-# Same shape as aris.default.yaml - only the `serving:` block differs from benchmark-adaptive.yaml.
+# Before using this, export a model and put both files side by side:
+#   aris-export ...  ->  data/models/policy.ts  +  data/models/policy.json
+# Compose mounts host ./data/models at /models inside the container, which is why the path below
+# is /models/policy.ts.
+#
+# Use it with:  make policy-adaptive    (sets ARIS_CONFIG=/config/benchmark-adaptive.yaml)
+# Identical to benchmark-static.yaml except for the two `serving:` values marked below.
 # Default settings for ARIS. Edit numbers here instead of hunting through code.
 # Tests check that every main section below is present. Design notes live in docs/adr/.
 
@@ -124,10 +128,11 @@ prometheus:
 serving:
   # Second listen port for gRPC (HTTP stays on simulation.compose_host_ports.policy_service mapping).
   grpc_port: 50051
-  # When false, callers must send a suggested triple; same as older demos.
-  inference_enabled: false
+  # CHANGED vs static: true means the TorchScript model decides instead of the caller.
+  inference_enabled: true
   # Path to TorchScript from aris-export; sidecar JSON must sit next to it (same base name, .json).
-  torchscript_path: null
+  # CHANGED vs static: mount the host folder that holds policy.ts + policy.json at /models.
+  torchscript_path: "/models/policy.ts"
   # If true and inference is on but the file is missing or bad, the process exits at startup.
   fail_if_model_missing: true
   # cpu is enough for small nets; use cuda only if you build images with GPU support.

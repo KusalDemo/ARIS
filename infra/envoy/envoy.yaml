@@ -1,18 +1,31 @@
-# Envoy front door: optional ext_authz call to the policy service before hitting the echo app.
-# Listens on 10000; policy and echo are separate clusters (Docker DNS names match compose service names).
+# Envoy = the "front door" proxy for the ARIS testbed.
+#
+# Every request from the outside world hits Envoy first (port 10000). Before Envoy lets the request
+# reach the echo app, it makes a quick side-call to the policy service and asks: "what retry /
+# backoff / timeout settings should this request use?" That side-call is the ext_authz filter below.
+#
+# Why do it this way? The apps stay dumb and unchanged. All the smart, adaptive decisions live in
+# one place (the policy service), so we can swap a static YAML policy for an RL model without
+# touching any application code.
+#
+# Names like `policy-service` and `echo-service` are Docker Compose service names: inside the
+# compose network, Docker's DNS resolves them to the right container.
 
 static_resources:
   listeners:
+    # A listener is just "a port Envoy accepts traffic on". 0.0.0.0 means "any network interface".
     - name: listener_http
       address:
         socket_address: { address: 0.0.0.0, port_value: 10000 }
       filter_chains:
         - filters:
+            # This filter turns raw TCP bytes into HTTP requests Envoy can route.
             - name: envoy.filters.network.http_connection_manager
               typed_config:
                 "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
                 stat_prefix: ingress_http
                 codec_type: AUTO
+                # Routing table: for now everything ("/" prefix) goes to the echo app.
                 route_config:
                   name: local_route
                   virtual_hosts:
@@ -21,6 +34,8 @@ static_resources:
                       routes:
                         - match: { prefix: "/" }
                           route: { cluster: echo_service }
+                # Filters run top-to-bottom for each request. ext_authz runs BEFORE router,
+                # so the policy answer is already attached when the request is forwarded.
                 http_filters:
                   - name: envoy.filters.http.ext_authz
                     typed_config:
@@ -28,10 +43,15 @@ static_resources:
                       transport_api_version: V3
                       http_service:
                         # Fixed auth URL (path_prefix + client path caused 404 on policy-service).
+                        # If the policy service does not answer within 2s, Envoy stops waiting.
                         server_uri:
                           uri: http://policy-service:8080/envoy/ext_authz
                           cluster: policy_service
                           timeout: 2s
+                        # Envoy does not forward every header to the policy service - only this
+                        # allow-list. These are the inputs the policy needs to make a decision:
+                        # which route, how badly it is failing, a trace id, and (optionally) the
+                        # 12-number observation vector the RL model expects.
                         authorization_request:
                           allowed_headers:
                             patterns:
@@ -41,6 +61,9 @@ static_resources:
                               - exact: x-aris-obs
                               - exact: traceparent
                               - exact: x-request-id
+                        # ...and these are the headers we let the policy service ADD to the request
+                        # before it continues upstream. This is how the decision (retry count,
+                        # backoff multiplier, timeout, freeze flag) actually reaches the app.
                         authorization_response:
                           allowed_upstream_headers:
                             patterns:
@@ -49,11 +72,15 @@ static_resources:
                               - exact: x-aris-timeout-ms
                               - exact: x-aris-frozen
                               - exact: x-aris-trace-id
+                  # The router filter is always last: it performs the actual forwarding.
                   - name: envoy.filters.http.router
                     typed_config:
                       "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
 
+  # A "cluster" is a named group of backend addresses Envoy can talk to.
+  # STRICT_DNS means: re-resolve the hostname periodically, so container restarts are handled.
   clusters:
+    # Where the ext_authz side-call goes.
     - name: policy_service
       type: STRICT_DNS
       connect_timeout: 1s
@@ -65,6 +92,7 @@ static_resources:
                   address:
                     socket_address: { address: policy-service, port_value: 8080 }
 
+    # Where normal traffic ends up once the policy call succeeds.
     - name: echo_service
       type: STRICT_DNS
       connect_timeout: 1s
@@ -76,6 +104,7 @@ static_resources:
                   address:
                     socket_address: { address: echo-service, port_value: 8080 }
 
+# Envoy's own admin/debug UI (stats, config dump). Handy when a request mysteriously fails.
 admin:
   address:
     socket_address: { address: 0.0.0.0, port_value: 9901 }

@@ -21,7 +21,7 @@ services:
       - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
     ports:
       - "9200:9200"
-    networks: [arcs]
+    networks: [aris]
     mem_limit: 1024m
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://127.0.0.1:9200/_cluster/health >/dev/null"]
@@ -39,7 +39,7 @@ services:
     depends_on:
       elasticsearch:
         condition: service_healthy
-    networks: [arcs]
+    networks: [aris]
     mem_limit: 512m
 
   filebeat:
@@ -53,5 +53,5 @@ services:
     depends_on:
       elasticsearch:
         condition: service_healthy
-    networks: [arcs]
+    networks: [aris]
     mem_limit: 256m
